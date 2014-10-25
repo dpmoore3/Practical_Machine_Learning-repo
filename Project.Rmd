@@ -1,0 +1,81 @@
+# Practical Machine Learning Course Project
+
+The purpose of this project was to build a prediction model to predict the "classe" variable.  Below is information regarding the source of the data used for this analysis.
+
+Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. Qualitative Activity Recognition of Weight Lifting Exercises. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013.
+
+Read more: http://groupware.les.inf.puc-rio.br/har#wle_paper_section#ixzz3H7cGKa8a
+
+First, I loaded the training and testing data files.  The testing file is actually for the final prediction and does not contain the "classe" variable.  So, in order to do cross validation, it was necessary to split the training data into training and test data sets.  I chose a 70/30 split using the "classe" variable.  70/30 is consistent with the splits used in some of the lectures.  
+---
+```{r, echo=FALSE}
+
+library(caret)
+# specify Url addresses of training and test data
+fileUrl_train <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+fileUrl_test <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+
+# download training & test data and save in working directory
+download.file(fileUrl_train,destfile="training.csv")
+download.file(fileUrl_test,destfile="testing.csv")
+
+# load training and test data
+training <- read.csv("training.csv")
+testing <- read.csv("testing.csv") #does not contain Classe variabe, so I will create my own test set
+
+# partitioning data to create my own test set
+inTrain <- createDataPartition(y=training$classe,p=0.7,list=FALSE)
+training2 <- training[inTrain,]
+testing2 <- training[-inTrain,]
+```
+I then looked at a summary of the data.   The complete training set has 160 variables and 19622 observations.  I noticed that many variables had mostly NAs or blanks.  These variables would not be useful predictors.  I created new test and training data sets.  I looped through each of the variables and if the variable had a large number of NAs or blanks I did not add it to my new training and test data sets.  If the number of NAs or blanks was below a judgmentally determined threshold, then I added that variable to my new training and test sets.  This resulted in 53 variables remaining (including the outcome variable).  
+
+```{r, echo=FALSE, results="hide"}
+summary(training) #summary shows many variables have mostly NAs or blanks
+
+#judgmentally selected a threshold to eliminate columns with blanks or NAs exceeding this amount
+threshold <- nrow(training2)*0.5 
+
+# based on reviewing summary, column 8 is the first column in the dataframe that I want to keep, hence # I will create a subset starting with this column only, then I will loop through columns 9 - 160 and # add columns to the subset that do not have large numbers of NAs or blanks.  I will do this for both # the training and testing data frames.
+training_subset <- subset(training2,select=8)
+testing_subset <- subset(testing2,select=8)
+
+j <- 2 #secondary counter used below
+n <- ncol(training2)
+
+# loop through all columns, if the count of NA or blank rows is greater than the threshold,
+# then do nothing, otherwise add the column to the new training and test subsets
+# this eliminates all columns with large numbers of NAs and blanks
+for (i in 9:n) {
+  if (sum(is.na(training2[,i]))>threshold) {}
+    else {if (sum(training2[,i]=="") > threshold)  {}
+    else {
+      training_subset[,j]=training2[,i]
+      colnames(training_subset)[j] <- colnames(training2)[i]
+      testing_subset[,j]=testing2[,i]
+      colnames(testing_subset)[j] <- colnames(testing2)[i]
+      j <- j+1}
+      } 
+}
+```
+I chose to use a random forest as my prediction model.  I used all the available predictor variables (52) in my new training data set. I trained the model using the new training data set and in order to perform cross-validation, I tested it on the new testing subset that I created.  Below is a table of actual vs. predicted classes.
+
+```{r,echo=FALSE}
+set.seed(1)
+modfit <- train(classe~.,data=training_subset,method="rf",prox=TRUE) 
+varImp(modfit)
+modfit
+pred <- predict(modfit,testing_subset)
+table(pred,testing_subset$classe)
+correct_predictions <- sum(pred==testing_subset$classe)
+out_of_sample_errors <- sum(pred!=testing_subset$classe)
+out_of_sample_error_rate <- sum(pred!=testing_subset$classe)/nrow(testing_subset)
+```
+One of the pro's of using random forests is the high accuracy.  So, I expected to the out-of-sample error rate to be low, but it was actually even lower than I was expecting.  The out-of-sample error rate is low (`r round(out_of_sample_error_rate,2)`). I was quite pleased with this result. Given time constraints and the good fit, I chose to stop with this rather than trying other methods and/or different combinations of variables.  
+
+```{r,echo=FALSE}
+pred_final <- predict(modfit,testing)
+pred_final
+```
+Finally, I ran the official testing set through the model.  The predicted results are: `r pred_final`.  I expect that the out of sample error rate will be similar to what I find with the testing subset that I created and used previously (< 1%).  
+
