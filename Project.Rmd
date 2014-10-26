@@ -12,12 +12,14 @@ First, I loaded the training and testing data files.  The testing file is actual
 
 library(caret)
 # specify Url addresses of training and test data
-fileUrl_train <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
-fileUrl_test <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+# commenting these steps out as the files are now in the working directory
+# fileUrl_train <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+# fileUrl_test <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
 
 # download training & test data and save in working directory
-download.file(fileUrl_train,destfile="training.csv")
-download.file(fileUrl_test,destfile="testing.csv")
+# commenting these steps out as the files are now in the working directory
+# download.file(fileUrl_train,destfile="training.csv")
+# download.file(fileUrl_test,destfile="testing.csv")
 
 # load training and test data
 training <- read.csv("training.csv")
